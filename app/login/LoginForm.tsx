@@ -31,11 +31,13 @@ export function LoginForm() {
           : await supabase.auth.signUp({
               email,
               password,
-              options: { emailRedirectTo: `${window.location.origin}/` },
+              options: {
+                emailRedirectTo: `${window.location.origin}/auth/callback?next=/`,
+              },
             });
 
       if (result.error) {
-        setError(result.error.message);
+        setError(authErrorMessage(result.error.message));
         return;
       }
 
@@ -56,6 +58,11 @@ export function LoginForm() {
         <h1 className="mt-1 text-2xl font-semibold tracking-tight">
           {mode === "login" ? "Log in" : "Create account"}
         </h1>
+        <p className="mt-3 text-sm leading-6 text-zinc-600">
+          {mode === "login"
+            ? "Use the email and password you created for this app."
+            : "Create your account first, then confirm the email if Supabase asks for confirmation."}
+        </p>
         <form action={submit} className="mt-6 space-y-4">
           <div>
             <label className="text-sm font-medium text-zinc-700" htmlFor="email">
@@ -112,4 +119,22 @@ export function LoginForm() {
       </section>
     </main>
   );
+}
+
+function authErrorMessage(message: string) {
+  const lower = message.toLowerCase();
+
+  if (lower.includes("invalid login credentials")) {
+    return "Login failed. Please create an account first, or check that the email and password are correct.";
+  }
+
+  if (lower.includes("email not confirmed")) {
+    return "Your email is not confirmed yet. Please open the confirmation email from Supabase, then log in again.";
+  }
+
+  if (lower.includes("rate") || lower.includes("too many")) {
+    return "Supabase is temporarily blocking new login/signup attempts because of rate limit. Please wait a few minutes, or create the user manually in Supabase Auth.";
+  }
+
+  return message;
 }
