@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { LeadStage, LeadSummary, LeadWithScripts } from "@/lib/types";
+import { extractInquiryType, extractLeadSource } from "@/lib/lead-contact";
 import { sortLeads } from "@/lib/sort";
+import { INQUIRY_TYPES, LEAD_SOURCES, LEAD_STAGES, normalizeStage } from "@/lib/workflow";
 
 type Filter = "All" | LeadStage;
 
@@ -26,7 +28,7 @@ export function LeadBoard({
     const sorted = sortLeads(initialLeads);
     return filter === "All"
       ? sorted
-      : sorted.filter((lead) => lead.stage === filter);
+      : sorted.filter((lead) => normalizeStage(lead.stage) === filter);
   }, [filter, initialLeads]);
 
   async function createLead(formData: FormData) {
@@ -36,7 +38,9 @@ export function LeadBoard({
       name: String(formData.get("name") ?? ""),
       company: String(formData.get("company") ?? ""),
       contact_number: String(formData.get("contact_number") ?? ""),
-      stage: String(formData.get("stage") ?? "MQL"),
+      lead_source: String(formData.get("lead_source") ?? ""),
+      inquiry_type: String(formData.get("inquiry_type") ?? ""),
+      stage: String(formData.get("stage") ?? "New Inquiry"),
       pain_points: String(formData.get("pain_points") ?? ""),
       email: String(formData.get("email") ?? ""),
       notes: String(formData.get("notes") ?? ""),
@@ -56,7 +60,7 @@ export function LeadBoard({
       const result = await response.json();
 
       if (!response.ok) {
-        setFormError(result.error ?? "Lead could not be created.");
+        setFormError(result.error ?? "Inquiry could not be created.");
         return;
       }
 
@@ -70,21 +74,22 @@ export function LeadBoard({
       <header className="border-b border-zinc-200 bg-white">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-5 py-6 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="text-sm font-medium text-teal-700">Brand Growth App</p>
-            <h1 className="mt-1 text-3xl font-semibold tracking-tight">Lead scripts workspace</h1>
+            <p className="text-sm font-medium text-teal-700">Heng Wei Hardware</p>
+            <h1 className="mt-1 text-3xl font-semibold tracking-tight">Inquiry follow-up board</h1>
           </div>
-          <div className="grid grid-cols-2 gap-2 text-sm md:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2 text-sm md:grid-cols-5">
             <Metric label="Total" value={initialSummary.total} />
-            <Metric label="MQL" value={initialSummary.mql} />
-            <Metric label="SQL" value={initialSummary.sql} />
-            <Metric label="Approved" value={initialSummary.approvedScripts} />
+            <Metric label="New" value={initialSummary.newInquiry} />
+            <Metric label="Open" value={initialSummary.openConversation} />
+            <Metric label="Pending" value={initialSummary.pending} />
+            <Metric label="Done" value={initialSummary.done} />
           </div>
         </div>
       </header>
 
       <main className="mx-auto grid max-w-7xl gap-6 px-5 py-6 lg:grid-cols-[380px_1fr]">
         <section className="h-fit border border-zinc-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-semibold">New Lead</h2>
+          <h2 className="text-lg font-semibold">New Inquiry</h2>
           <form action={createLead} className="mt-4 space-y-4">
             <Field name="name" label="Name" required />
             <Field name="company" label="Company / project name" />
@@ -97,19 +102,22 @@ export function LeadBoard({
                 className="mt-1 w-full border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-teal-600"
                 id="stage"
                 name="stage"
-                defaultValue="MQL"
+                defaultValue="New Inquiry"
               >
-                <option>MQL</option>
-                <option>SQL</option>
+                {LEAD_STAGES.map((stage) => (
+                  <option key={stage}>{stage}</option>
+                ))}
               </select>
             </div>
+            <SelectField label="Lead source" name="lead_source" options={LEAD_SOURCES} />
+            <SelectField label="Inquiry type" name="inquiry_type" options={INQUIRY_TYPES} />
             <Field name="email" label="Email" type="email" />
-            <TextArea name="pain_points" label="Pain points" required />
+            <TextArea name="pain_points" label="Customer request" required />
             <TextArea name="notes" label="Notes" />
             {formError ? <p className="text-sm text-red-700">{formError}</p> : null}
             {!envReady ? (
               <p className="text-sm text-amber-700">
-                Supabase env is missing locally. Pull Vercel env to create leads.
+                Supabase env is missing locally. Pull Vercel env to create inquiries.
               </p>
             ) : null}
             <button
@@ -117,7 +125,7 @@ export function LeadBoard({
               disabled={isPending || !envReady}
               type="submit"
             >
-              {isPending ? "Creating..." : "Create Lead"}
+              {isPending ? "Creating..." : "Create Inquiry"}
             </button>
           </form>
         </section>
@@ -125,7 +133,7 @@ export function LeadBoard({
         <section>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex border border-zinc-200 bg-white p-1">
-              {(["All", "MQL", "SQL"] as Filter[]).map((tab) => (
+              {(["All", ...LEAD_STAGES] as Filter[]).map((tab) => (
                 <button
                   className={`px-4 py-2 text-sm font-medium ${
                     filter === tab ? "bg-teal-700 text-white" : "text-zinc-600"
@@ -143,7 +151,7 @@ export function LeadBoard({
           <div className="mt-4 grid gap-3">
             {filteredLeads.length === 0 ? (
               <div className="border border-dashed border-zinc-300 bg-white p-8 text-center text-zinc-600">
-                No leads yet. Add your first lead above.
+                No inquiries yet. Add your first inquiry above.
               </div>
             ) : (
               filteredLeads.map((lead) => {
@@ -170,8 +178,20 @@ export function LeadBoard({
                         </span>
                       ) : null}
                     </div>
+                    <div className="mt-3 flex flex-wrap gap-2 text-xs text-zinc-600">
+                      {extractLeadSource(lead.notes) ? (
+                        <span className="border border-zinc-200 px-2 py-1">
+                          {extractLeadSource(lead.notes)}
+                        </span>
+                      ) : null}
+                      {extractInquiryType(lead.notes) ? (
+                        <span className="border border-zinc-200 px-2 py-1">
+                          {extractInquiryType(lead.notes)}
+                        </span>
+                      ) : null}
+                    </div>
                     <p className="mt-3 line-clamp-2 text-sm text-zinc-700">
-                      {lead.pain_points || "No pain points captured yet."}
+                      {lead.pain_points || "No customer request captured yet."}
                     </p>
                   </Link>
                 );
@@ -194,14 +214,49 @@ function Metric({ label, value }: { label: string; value: number }) {
 }
 
 export function StageBadge({ stage }: { stage: LeadStage }) {
+  const normalized = normalizeStage(stage);
+  const className =
+    normalized === "Done"
+      ? "bg-emerald-100 text-emerald-800"
+      : normalized === "Pending"
+        ? "bg-amber-100 text-amber-800"
+        : normalized === "Open Conversation"
+          ? "bg-violet-100 text-violet-800"
+          : "bg-sky-100 text-sky-800";
+
   return (
-    <span
-      className={`px-2 py-1 text-xs font-bold ${
-        stage === "SQL" ? "bg-emerald-100 text-emerald-800" : "bg-sky-100 text-sky-800"
-      }`}
-    >
-      {stage}
+    <span className={`px-2 py-1 text-xs font-bold ${className}`}>
+      {normalized}
     </span>
+  );
+}
+
+function SelectField({
+  label,
+  name,
+  options,
+}: {
+  label: string;
+  name: string;
+  options: string[];
+}) {
+  return (
+    <div>
+      <label className="text-sm font-medium text-zinc-700" htmlFor={name}>
+        {label}
+      </label>
+      <select
+        className="mt-1 w-full border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-teal-600"
+        id={name}
+        name={name}
+        defaultValue=""
+      >
+        <option value="">Select...</option>
+        {options.map((option) => (
+          <option key={option}>{option}</option>
+        ))}
+      </select>
+    </div>
   );
 }
 

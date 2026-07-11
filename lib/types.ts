@@ -1,5 +1,16 @@
-export type LeadStage = "MQL" | "SQL";
+export type LeadStage =
+  | "New Inquiry"
+  | "Open Conversation"
+  | "Pending"
+  | "Done";
 export type ReviewStatus = "draft" | "approved" | "rejected";
+export type ReplyType =
+  | "ask_details"
+  | "quote_follow_up"
+  | "stock_available"
+  | "out_of_stock"
+  | "payment_pickup_delivery"
+  | "general_follow_up";
 
 export type Lead = {
   id: string;
@@ -31,7 +42,9 @@ export type LeadWithScripts = Lead & {
 
 export type LeadSummary = {
   total: number;
-  mql: number;
-  sql: number;
+  newInquiry: number;
+  openConversation: number;
+  pending: number;
+  done: number;
   approvedScripts: number;
 };
