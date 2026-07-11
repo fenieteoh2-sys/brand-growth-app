@@ -58,6 +58,25 @@ export function LeadBoard({
     });
   }, [filter, sourceFilter, typeFilter, followUpFilter, initialLeads]);
 
+  const followUpQueue = useMemo(() => {
+    const activeLeads = sortLeads(initialLeads).filter(
+      (lead) => normalizeStage(lead.stage) !== "Done",
+    );
+    return {
+      overdue: activeLeads.filter(
+        (lead) => getFollowUpStatus(getLeadNextFollowUpDate(lead)) === "Overdue",
+      ),
+      today: activeLeads.filter(
+        (lead) => getFollowUpStatus(getLeadNextFollowUpDate(lead)) === "Today",
+      ),
+      noDatePending: activeLeads.filter(
+        (lead) =>
+          normalizeStage(lead.stage) === "Pending" &&
+          getFollowUpStatus(getLeadNextFollowUpDate(lead)) === "No date",
+      ),
+    };
+  }, [initialLeads]);
+
   async function createLead(formData: FormData) {
     setFormError("");
 
@@ -164,6 +183,33 @@ export function LeadBoard({
         </section>
 
         <section>
+          <div className="mb-4 grid gap-3 md:grid-cols-3">
+            <QueueCard
+              count={followUpQueue.overdue.length}
+              label="Overdue"
+              leads={followUpQueue.overdue}
+              onClick={() => setFollowUpFilter("Overdue")}
+              tone="red"
+            />
+            <QueueCard
+              count={followUpQueue.today.length}
+              label="Today"
+              leads={followUpQueue.today}
+              onClick={() => setFollowUpFilter("Today")}
+              tone="green"
+            />
+            <QueueCard
+              count={followUpQueue.noDatePending.length}
+              label="Pending no date"
+              leads={followUpQueue.noDatePending}
+              onClick={() => {
+                setFilter("Pending");
+                setFollowUpFilter("No date");
+              }}
+              tone="amber"
+            />
+          </div>
+
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap border border-zinc-200 bg-white p-1">
               {(["All", ...LEAD_STAGES] as Filter[]).map((tab) => (
@@ -261,6 +307,43 @@ export function LeadBoard({
         </section>
       </main>
     </div>
+  );
+}
+
+function QueueCard({
+  count,
+  label,
+  leads,
+  onClick,
+  tone,
+}: {
+  count: number;
+  label: string;
+  leads: LeadWithScripts[];
+  onClick: () => void;
+  tone: "red" | "green" | "amber";
+}) {
+  const className =
+    tone === "red"
+      ? "border-red-200 bg-red-50 text-red-900"
+      : tone === "green"
+        ? "border-green-200 bg-green-50 text-green-900"
+        : "border-amber-200 bg-amber-50 text-amber-900";
+
+  return (
+    <button
+      className={`border p-4 text-left shadow-sm transition hover:border-zinc-400 ${className}`}
+      onClick={onClick}
+      type="button"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-sm font-semibold">{label}</span>
+        <span className="text-2xl font-semibold">{count}</span>
+      </div>
+      <p className="mt-2 line-clamp-1 text-xs">
+        {leads[0] ? leads.slice(0, 2).map((lead) => lead.name).join(", ") : "Clear"}
+      </p>
+    </button>
   );
 }
 
