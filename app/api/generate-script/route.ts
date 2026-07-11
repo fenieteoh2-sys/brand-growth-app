@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireApiUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { hasSupabaseEnv } from "@/lib/supabase/config";
 import { jsonError, requiredString } from "@/lib/api";
@@ -13,6 +14,8 @@ import { REPLY_TYPES, normalizeStage, replyTypeLabel } from "@/lib/workflow";
 
 export async function POST(request: Request) {
   if (!hasSupabaseEnv()) return jsonError("Supabase is not configured.", 503);
+  const { user, response } = await requireApiUser();
+  if (response) return response;
 
   try {
     const body = await request.json();
@@ -43,6 +46,7 @@ export async function POST(request: Request) {
       .from("scripts")
       .insert({
         lead_id: leadId,
+        user_id: user.id,
         value: generation.value,
         source: `hardware-reply:${replyType}`,
         confidence: generation.confidence,
@@ -56,6 +60,7 @@ export async function POST(request: Request) {
 
     const audit = await supabase.from("audit_logs").insert({
       table_name: "scripts",
+      user_id: user.id,
       row_id: script.id,
       action: nextVersion === 1 ? "generate_script" : "regenerate_script",
       payload: { lead_id: leadId, after: script },

@@ -18,6 +18,7 @@ import {
   getFollowUpStatus,
   normalizeStage,
 } from "@/lib/workflow";
+import { LogoutButton } from "./LogoutButton";
 
 type Filter = "All" | LeadStage;
 type OptionFilter = "All" | string;
@@ -26,10 +27,12 @@ export function LeadBoard({
   initialLeads,
   initialSummary,
   envReady,
+  userEmail,
 }: {
   initialLeads: LeadWithScripts[];
   initialSummary: LeadSummary;
   envReady: boolean;
+  userEmail: string;
 }) {
   const router = useRouter();
   const [filter, setFilter] = useState<Filter>("All");
@@ -101,13 +104,17 @@ export function LeadBoard({
           <div>
             <p className="text-sm font-medium text-teal-700">Heng Wei Hardware</p>
             <h1 className="mt-1 text-3xl font-semibold tracking-tight">Inquiry follow-up board</h1>
+            <p className="mt-1 text-sm text-zinc-500">{userEmail}</p>
           </div>
-          <div className="grid grid-cols-2 gap-2 text-sm md:grid-cols-5">
-            <Metric label="Total" value={initialSummary.total} />
-            <Metric label="New" value={initialSummary.newInquiry} />
-            <Metric label="Open" value={initialSummary.openConversation} />
-            <Metric label="Pending" value={initialSummary.pending} />
-            <Metric label="Done" value={initialSummary.done} />
+          <div className="flex flex-col gap-3 md:items-end">
+            <LogoutButton />
+            <div className="grid grid-cols-2 gap-2 text-sm md:grid-cols-5">
+              <Metric label="Total" value={initialSummary.total} />
+              <Metric label="New" value={initialSummary.newInquiry} />
+              <Metric label="Open" value={initialSummary.openConversation} />
+              <Metric label="Pending" value={initialSummary.pending} />
+              <Metric label="Done" value={initialSummary.done} />
+            </div>
           </div>
         </div>
       </header>

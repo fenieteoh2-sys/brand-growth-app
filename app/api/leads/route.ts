@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireApiUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { hasSupabaseEnv } from "@/lib/supabase/config";
 import { jsonError, requiredString } from "@/lib/api";
@@ -7,6 +8,8 @@ import { normalizeStage } from "@/lib/workflow";
 
 export async function POST(request: Request) {
   if (!hasSupabaseEnv()) return jsonError("Supabase is not configured.", 503);
+  const { user, response } = await requireApiUser();
+  if (response) return response;
 
   try {
     const body = await request.json();
@@ -24,6 +27,7 @@ export async function POST(request: Request) {
       .from("leads")
       .insert({
         name,
+        user_id: user.id,
         company,
         stage,
         pain_points,
@@ -48,6 +52,7 @@ export async function POST(request: Request) {
         .from("leads")
         .insert({
           name,
+          user_id: user.id,
           company,
           stage,
           pain_points,
@@ -69,6 +74,7 @@ export async function POST(request: Request) {
     if (error || !lead) return jsonError(error?.message ?? "Inquiry not created.", 500);
     await supabase.from("audit_logs").insert({
       table_name: "leads",
+      user_id: user.id,
       row_id: lead.id,
       action: "create_lead",
       payload: { after: lead },

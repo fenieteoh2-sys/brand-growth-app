@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireApiUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { hasSupabaseEnv } from "@/lib/supabase/config";
 import { jsonError, requiredString } from "@/lib/api";
@@ -14,6 +15,8 @@ type Params = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: Request, { params }: Params) {
   if (!hasSupabaseEnv()) return jsonError("Supabase is not configured.", 503);
+  const { user, response } = await requireApiUser();
+  if (response) return response;
 
   try {
     const { id } = await params;
@@ -110,6 +113,7 @@ export async function PATCH(request: Request, { params }: Params) {
 
     await supabase.from("audit_logs").insert({
       table_name: "leads",
+      user_id: user.id,
       row_id: id,
       action: before?.stage !== lead.stage ? "stage_change" : "update_lead",
       payload: { before, after: lead },
@@ -132,6 +136,8 @@ function isMissingColumnError(error: { message?: string; code?: string } | null)
 
 export async function DELETE(_: Request, { params }: Params) {
   if (!hasSupabaseEnv()) return jsonError("Supabase is not configured.", 503);
+  const { user, response } = await requireApiUser();
+  if (response) return response;
 
   const { id } = await params;
   const supabase = await createClient();
@@ -143,6 +149,7 @@ export async function DELETE(_: Request, { params }: Params) {
 
   const audit = await supabase.from("audit_logs").insert({
     table_name: "leads",
+    user_id: user.id,
     row_id: id,
     action: "delete_lead",
     payload: { before },
