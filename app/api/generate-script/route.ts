@@ -87,7 +87,7 @@ async function generateDraft(lead: Lead): Promise<{
         {
           role: "system",
           content:
-            "You draft concise outbound sales scripts. Return strict JSON with value and confidence from 0 to 1.",
+            "You write concise WhatsApp-style follow-up messages for Heng Wei Hardware, a Malaysian hardware retail shop selling hand tools, power tools, workshop tools, plumbing accessories, sanitary ware, toilet fittings, sinks, and renovation supplies. Do not mention SaaS, pipeline, demos, revenue impact, qualified opportunities, or 15-minute calls. Ask practical buying questions such as size, quantity, photo, model, budget, delivery/self-collect, and whether they need a quotation. Return strict JSON with value and confidence from 0 to 1.",
         },
         {
           role: "user",
@@ -97,6 +97,7 @@ async function generateDraft(lead: Lead): Promise<{
             stage: lead.stage,
             pain_points: lead.pain_points,
             notes: lead.notes,
+            channel: "WhatsApp or direct customer follow-up",
           }),
         },
       ],
@@ -127,10 +128,14 @@ async function generateDraft(lead: Lead): Promise<{
 }
 
 function fallbackDraft(lead: Lead) {
-  const pain = lead.pain_points || "turning interested prospects into qualified pipeline";
+  const pain = lead.pain_points || "hardware, plumbing, tools, or sanitary ware inquiry";
+  const contactLine = lead.stage === "SQL"
+    ? "I can check stock/options and prepare a quotation for you."
+    : "I can help recommend suitable options and estimate what items you may need.";
+
   return {
-    value: `Hi ${lead.name} - I noticed ${lead.company} is dealing with ${pain}. Teams at the ${lead.stage} stage usually need a clear next step that connects the pain to measurable revenue impact. Worth a 15-minute conversation this week to map the fastest path from interest to a qualified opportunity?`,
+    value: `Hi ${lead.name}, thanks for your inquiry. I understand you are looking for ${pain}. ${contactLine} Can you share the quantity, size/spec, preferred brand or a photo of the area/item? If convenient, we can continue by WhatsApp and I will suggest suitable products from our hardware, plumbing and sanitary ware range.`,
     source: "rule-based-fallback",
-    confidence: 0.76,
+    confidence: 0.84,
   };
 }

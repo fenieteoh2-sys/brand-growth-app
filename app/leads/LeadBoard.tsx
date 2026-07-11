@@ -35,6 +35,7 @@ export function LeadBoard({
     const body = {
       name: String(formData.get("name") ?? ""),
       company: String(formData.get("company") ?? ""),
+      contact_number: String(formData.get("contact_number") ?? ""),
       stage: String(formData.get("stage") ?? "MQL"),
       pain_points: String(formData.get("pain_points") ?? ""),
       email: String(formData.get("email") ?? ""),
@@ -86,7 +87,8 @@ export function LeadBoard({
           <h2 className="text-lg font-semibold">New Lead</h2>
           <form action={createLead} className="mt-4 space-y-4">
             <Field name="name" label="Name" required />
-            <Field name="company" label="Company" required />
+            <Field name="company" label="Company / project name" />
+            <Field name="contact_number" label="Contact number" type="tel" />
             <div>
               <label className="text-sm font-medium text-zinc-700" htmlFor="stage">
                 Stage
@@ -158,7 +160,9 @@ export function LeadBoard({
                           <h3 className="text-lg font-semibold">{lead.name}</h3>
                           <StageBadge stage={lead.stage} />
                         </div>
-                        <p className="text-sm text-zinc-600">{lead.company}</p>
+                        <p className="text-sm text-zinc-600">
+                          {lead.company || "Personal inquiry"}
+                        </p>
                       </div>
                       {script ? (
                         <span className="border border-zinc-200 px-2 py-1 text-xs font-medium capitalize text-zinc-700">

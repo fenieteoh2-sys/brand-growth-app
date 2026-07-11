@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { hasSupabaseEnv } from "@/lib/supabase/config";
 import { jsonError, requiredString } from "@/lib/api";
+import { combineNotesWithContact } from "@/lib/lead-contact";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -24,14 +25,20 @@ export async function PATCH(request: Request, { params }: Params) {
       company:
         body.company === undefined
           ? undefined
-          : requiredString(body.company, "Company"),
+          : body.company?.trim() || "Personal inquiry",
       stage: body.stage === "SQL" ? "SQL" : body.stage === "MQL" ? "MQL" : undefined,
       pain_points:
         body.pain_points === undefined
           ? undefined
           : requiredString(body.pain_points, "Pain points"),
       email: body.email === undefined ? undefined : body.email?.trim() || null,
-      notes: body.notes === undefined ? undefined : body.notes?.trim() || null,
+      notes:
+        body.notes === undefined && body.contact_number === undefined
+          ? undefined
+          : combineNotesWithContact(
+              body.notes?.trim() ?? before?.notes ?? "",
+              body.contact_number?.trim() ?? "",
+            ),
     };
 
     const { data: lead, error } = await supabase

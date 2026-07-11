@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { LeadWithScripts, Script } from "@/lib/types";
+import { extractContactNumber, stripContactFromNotes } from "@/lib/lead-contact";
 import { StageBadge } from "../LeadBoard";
 
 export function LeadDetail({ initialLead }: { initialLead: LeadWithScripts }) {
@@ -22,6 +23,7 @@ export function LeadDetail({ initialLead }: { initialLead: LeadWithScripts }) {
     const body = {
       name: String(formData.get("name") ?? ""),
       company: String(formData.get("company") ?? ""),
+      contact_number: String(formData.get("contact_number") ?? ""),
       stage: String(formData.get("stage") ?? "MQL"),
       pain_points: String(formData.get("pain_points") ?? ""),
       email: String(formData.get("email") ?? ""),
@@ -153,7 +155,7 @@ export function LeadDetail({ initialLead }: { initialLead: LeadWithScripts }) {
               <h1 className="text-3xl font-semibold tracking-tight">{lead.name}</h1>
               <StageBadge stage={lead.stage} />
             </div>
-            <p className="text-zinc-600">{lead.company}</p>
+            <p className="text-zinc-600">{lead.company || "Personal inquiry"}</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <button
@@ -181,7 +183,11 @@ export function LeadDetail({ initialLead }: { initialLead: LeadWithScripts }) {
           <h2 className="text-lg font-semibold">Lead details</h2>
           <form action={updateLead} className="mt-4 space-y-4">
             <Field defaultValue={lead.name} label="Name" name="name" required />
-            <Field defaultValue={lead.company} label="Company" name="company" required />
+            <Field
+              defaultValue={lead.company === "Personal inquiry" ? "" : lead.company}
+              label="Company / project name"
+              name="company"
+            />
             <div>
               <label className="text-sm font-medium text-zinc-700" htmlFor="stage">
                 Stage
@@ -197,13 +203,23 @@ export function LeadDetail({ initialLead }: { initialLead: LeadWithScripts }) {
               </select>
             </div>
             <Field defaultValue={lead.email ?? ""} label="Email" name="email" type="email" />
+            <Field
+              defaultValue={extractContactNumber(lead.notes)}
+              label="Contact number"
+              name="contact_number"
+              type="tel"
+            />
             <TextArea
               defaultValue={lead.pain_points ?? ""}
               label="Pain points"
               name="pain_points"
               required
             />
-            <TextArea defaultValue={lead.notes ?? ""} label="Notes" name="notes" />
+            <TextArea
+              defaultValue={stripContactFromNotes(lead.notes)}
+              label="Notes"
+              name="notes"
+            />
             {error ? <p className="text-sm text-red-700">{error}</p> : null}
             {message ? <p className="text-sm text-teal-700">{message}</p> : null}
             <button

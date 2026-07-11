@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { hasSupabaseEnv } from "@/lib/supabase/config";
 import { jsonError, requiredString } from "@/lib/api";
+import { combineNotesWithContact } from "@/lib/lead-contact";
 
 export async function POST(request: Request) {
   if (!hasSupabaseEnv()) return jsonError("Supabase is not configured.", 503);
@@ -9,7 +10,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const name = requiredString(body.name, "Name");
-    const company = requiredString(body.company, "Company");
+    const company = body.company?.trim() || "Personal inquiry";
     const stage = body.stage === "SQL" ? "SQL" : "MQL";
     const pain_points = requiredString(body.pain_points, "Pain points");
 
@@ -22,7 +23,10 @@ export async function POST(request: Request) {
         stage,
         pain_points,
         email: body.email?.trim() || null,
-        notes: body.notes?.trim() || null,
+        notes: combineNotesWithContact(
+          body.notes?.trim() ?? "",
+          body.contact_number?.trim() ?? "",
+        ),
       })
       .select("*")
       .single();
