@@ -12,7 +12,11 @@ export async function POST(request: Request) {
     const body = await request.json();
     const name = requiredString(body.name, "Name");
     const company = body.company?.trim() || "Personal inquiry";
-    const stage = normalizeStage(body.stage);
+    const requestedStage = normalizeStage(body.stage);
+    const stage =
+      body.next_follow_up_date?.trim() && requestedStage !== "Done"
+        ? "Pending"
+        : requestedStage;
     const pain_points = requiredString(body.pain_points, "Pain points");
 
     const supabase = await createClient();
