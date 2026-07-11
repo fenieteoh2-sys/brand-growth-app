@@ -20,6 +20,10 @@ export type Lead = {
   stage: LeadStage;
   pain_points: string | null;
   email: string | null;
+  contact_number?: string | null;
+  lead_source?: string | null;
+  inquiry_type?: string | null;
+  next_follow_up_date?: string | null;
   notes: string | null;
   created_at: string;
 };

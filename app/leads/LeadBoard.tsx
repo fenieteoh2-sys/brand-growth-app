@@ -4,11 +4,23 @@ import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { LeadStage, LeadSummary, LeadWithScripts } from "@/lib/types";
-import { extractInquiryType, extractLeadSource } from "@/lib/lead-contact";
+import {
+  getLeadInquiryType,
+  getLeadNextFollowUpDate,
+  getLeadSource,
+} from "@/lib/lead-contact";
 import { sortLeads } from "@/lib/sort";
-import { INQUIRY_TYPES, LEAD_SOURCES, LEAD_STAGES, normalizeStage } from "@/lib/workflow";
+import {
+  INQUIRY_TYPES,
+  LEAD_SOURCES,
+  LEAD_STAGES,
+  type FollowUpFilter,
+  getFollowUpStatus,
+  normalizeStage,
+} from "@/lib/workflow";
 
 type Filter = "All" | LeadStage;
+type OptionFilter = "All" | string;
 
 export function LeadBoard({
   initialLeads,
@@ -21,15 +33,27 @@ export function LeadBoard({
 }) {
   const router = useRouter();
   const [filter, setFilter] = useState<Filter>("All");
+  const [sourceFilter, setSourceFilter] = useState<OptionFilter>("All");
+  const [typeFilter, setTypeFilter] = useState<OptionFilter>("All");
+  const [followUpFilter, setFollowUpFilter] = useState<FollowUpFilter>("All");
   const [formError, setFormError] = useState("");
   const [isPending, startTransition] = useTransition();
 
   const filteredLeads = useMemo(() => {
     const sorted = sortLeads(initialLeads);
-    return filter === "All"
-      ? sorted
-      : sorted.filter((lead) => normalizeStage(lead.stage) === filter);
-  }, [filter, initialLeads]);
+    return sorted.filter((lead) => {
+      const stageMatch = filter === "All" || normalizeStage(lead.stage) === filter;
+      const sourceMatch =
+        sourceFilter === "All" || getLeadSource(lead) === sourceFilter;
+      const typeMatch =
+        typeFilter === "All" || getLeadInquiryType(lead) === typeFilter;
+      const followUpMatch =
+        followUpFilter === "All" ||
+        getFollowUpStatus(getLeadNextFollowUpDate(lead)) === followUpFilter;
+
+      return stageMatch && sourceMatch && typeMatch && followUpMatch;
+    });
+  }, [filter, sourceFilter, typeFilter, followUpFilter, initialLeads]);
 
   async function createLead(formData: FormData) {
     setFormError("");
@@ -40,6 +64,7 @@ export function LeadBoard({
       contact_number: String(formData.get("contact_number") ?? ""),
       lead_source: String(formData.get("lead_source") ?? ""),
       inquiry_type: String(formData.get("inquiry_type") ?? ""),
+      next_follow_up_date: String(formData.get("next_follow_up_date") ?? ""),
       stage: String(formData.get("stage") ?? "New Inquiry"),
       pain_points: String(formData.get("pain_points") ?? ""),
       email: String(formData.get("email") ?? ""),
@@ -94,6 +119,7 @@ export function LeadBoard({
             <Field name="name" label="Name" required />
             <Field name="company" label="Company / project name" />
             <Field name="contact_number" label="Contact number" type="tel" />
+            <Field name="next_follow_up_date" label="Next follow-up date" type="date" />
             <div>
               <label className="text-sm font-medium text-zinc-700" htmlFor="stage">
                 Stage
@@ -132,7 +158,7 @@ export function LeadBoard({
 
         <section>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex border border-zinc-200 bg-white p-1">
+            <div className="flex flex-wrap border border-zinc-200 bg-white p-1">
               {(["All", ...LEAD_STAGES] as Filter[]).map((tab) => (
                 <button
                   className={`px-4 py-2 text-sm font-medium ${
@@ -146,6 +172,26 @@ export function LeadBoard({
                 </button>
               ))}
             </div>
+            <div className="grid w-full gap-2 md:grid-cols-3">
+              <FilterSelect
+                label="Source"
+                onChange={setSourceFilter}
+                options={LEAD_SOURCES}
+                value={sourceFilter}
+              />
+              <FilterSelect
+                label="Type"
+                onChange={setTypeFilter}
+                options={INQUIRY_TYPES}
+                value={typeFilter}
+              />
+              <FilterSelect
+                label="Follow-up"
+                onChange={(value) => setFollowUpFilter(value as FollowUpFilter)}
+                options={["Overdue", "Today", "Upcoming", "No date"]}
+                value={followUpFilter}
+              />
+            </div>
           </div>
 
           <div className="mt-4 grid gap-3">
@@ -156,6 +202,7 @@ export function LeadBoard({
             ) : (
               filteredLeads.map((lead) => {
                 const script = lead.scripts[0];
+                const followUpStatus = getFollowUpStatus(getLeadNextFollowUpDate(lead));
                 return (
                   <Link
                     className="border border-zinc-200 bg-white p-4 shadow-sm transition hover:border-teal-500"
@@ -167,6 +214,7 @@ export function LeadBoard({
                         <div className="flex flex-wrap items-center gap-2">
                           <h3 className="text-lg font-semibold">{lead.name}</h3>
                           <StageBadge stage={lead.stage} />
+                          <FollowUpBadge status={followUpStatus} />
                         </div>
                         <p className="text-sm text-zinc-600">
                           {lead.company || "Personal inquiry"}
@@ -179,14 +227,19 @@ export function LeadBoard({
                       ) : null}
                     </div>
                     <div className="mt-3 flex flex-wrap gap-2 text-xs text-zinc-600">
-                      {extractLeadSource(lead.notes) ? (
+                      {getLeadSource(lead) ? (
                         <span className="border border-zinc-200 px-2 py-1">
-                          {extractLeadSource(lead.notes)}
+                          {getLeadSource(lead)}
                         </span>
                       ) : null}
-                      {extractInquiryType(lead.notes) ? (
+                      {getLeadInquiryType(lead) ? (
                         <span className="border border-zinc-200 px-2 py-1">
-                          {extractInquiryType(lead.notes)}
+                          {getLeadInquiryType(lead)}
+                        </span>
+                      ) : null}
+                      {getLeadNextFollowUpDate(lead) ? (
+                        <span className="border border-zinc-200 px-2 py-1">
+                          Follow-up {getLeadNextFollowUpDate(lead)}
                         </span>
                       ) : null}
                     </div>
@@ -201,6 +254,49 @@ export function LeadBoard({
         </section>
       </main>
     </div>
+  );
+}
+
+function FollowUpBadge({ status }: { status: string }) {
+  if (status !== "Overdue" && status !== "Today") return null;
+  return (
+    <span
+      className={`px-2 py-1 text-xs font-bold ${
+        status === "Overdue"
+          ? "bg-red-100 text-red-800"
+          : "bg-green-100 text-green-800"
+      }`}
+    >
+      {status}
+    </span>
+  );
+}
+
+function FilterSelect({
+  label,
+  onChange,
+  options,
+  value,
+}: {
+  label: string;
+  onChange: (value: string) => void;
+  options: string[];
+  value: string;
+}) {
+  return (
+    <label className="text-xs font-medium text-zinc-600">
+      {label}
+      <select
+        className="mt-1 w-full border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-800 outline-none focus:border-teal-600"
+        onChange={(event) => onChange(event.target.value)}
+        value={value}
+      >
+        <option>All</option>
+        {options.map((option) => (
+          <option key={option}>{option}</option>
+        ))}
+      </select>
+    </label>
   );
 }
 

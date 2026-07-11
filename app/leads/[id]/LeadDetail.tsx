@@ -5,9 +5,10 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { LeadWithScripts, ReplyType, Script } from "@/lib/types";
 import {
-  extractContactNumber,
-  extractInquiryType,
-  extractLeadSource,
+  getLeadContactNumber,
+  getLeadInquiryType,
+  getLeadNextFollowUpDate,
+  getLeadSource,
   stripLeadMetaFromNotes,
 } from "@/lib/lead-contact";
 import {
@@ -43,6 +44,7 @@ export function LeadDetail({ initialLead }: { initialLead: LeadWithScripts }) {
       contact_number: String(formData.get("contact_number") ?? ""),
       lead_source: String(formData.get("lead_source") ?? ""),
       inquiry_type: String(formData.get("inquiry_type") ?? ""),
+      next_follow_up_date: String(formData.get("next_follow_up_date") ?? ""),
       stage: String(formData.get("stage") ?? "New Inquiry"),
       pain_points: String(formData.get("pain_points") ?? ""),
       email: String(formData.get("email") ?? ""),
@@ -251,23 +253,29 @@ export function LeadDetail({ initialLead }: { initialLead: LeadWithScripts }) {
               </select>
             </div>
             <SelectField
-              defaultValue={extractLeadSource(lead.notes)}
+              defaultValue={getLeadSource(lead)}
               label="Lead source"
               name="lead_source"
               options={LEAD_SOURCES}
             />
             <SelectField
-              defaultValue={extractInquiryType(lead.notes)}
+              defaultValue={getLeadInquiryType(lead)}
               label="Inquiry type"
               name="inquiry_type"
               options={INQUIRY_TYPES}
             />
             <Field defaultValue={lead.email ?? ""} label="Email" name="email" type="email" />
             <Field
-              defaultValue={extractContactNumber(lead.notes)}
+              defaultValue={getLeadContactNumber(lead)}
               label="Contact number"
               name="contact_number"
               type="tel"
+            />
+            <Field
+              defaultValue={getLeadNextFollowUpDate(lead)}
+              label="Next follow-up date"
+              name="next_follow_up_date"
+              type="date"
             />
             <TextArea
               defaultValue={lead.pain_points ?? ""}

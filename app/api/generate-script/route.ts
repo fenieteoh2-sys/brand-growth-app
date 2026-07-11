@@ -3,9 +3,10 @@ import { createClient } from "@/lib/supabase/server";
 import { hasSupabaseEnv } from "@/lib/supabase/config";
 import { jsonError, requiredString } from "@/lib/api";
 import {
-  extractContactNumber,
-  extractInquiryType,
-  extractLeadSource,
+  getLeadContactNumber,
+  getLeadInquiryType,
+  getLeadNextFollowUpDate,
+  getLeadSource,
 } from "@/lib/lead-contact";
 import type { Lead, ReplyType, Script } from "@/lib/types";
 import { REPLY_TYPES, normalizeStage, replyTypeLabel } from "@/lib/workflow";
@@ -65,6 +66,13 @@ export async function POST(request: Request) {
       return jsonError(audit.error.message, 500);
     }
 
+    if (normalizeStage((lead as Lead).stage) === "New Inquiry") {
+      await supabase
+        .from("leads")
+        .update({ stage: "Open Conversation" })
+        .eq("id", leadId);
+    }
+
     return NextResponse.json({ script });
   } catch (error) {
     return jsonError(
@@ -107,9 +115,10 @@ async function generateDraft(
             company: lead.company,
             stage: normalizeStage(lead.stage),
             customer_request: lead.pain_points,
-            contact_number: extractContactNumber(lead.notes),
-            lead_source: extractLeadSource(lead.notes),
-            inquiry_type: extractInquiryType(lead.notes),
+            contact_number: getLeadContactNumber(lead),
+            lead_source: getLeadSource(lead),
+            inquiry_type: getLeadInquiryType(lead),
+            next_follow_up_date: getLeadNextFollowUpDate(lead),
             notes: lead.notes,
             channel: "WhatsApp or direct customer follow-up",
             instructions:

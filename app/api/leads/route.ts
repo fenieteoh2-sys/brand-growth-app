@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     const pain_points = requiredString(body.pain_points, "Pain points");
 
     const supabase = await createClient();
-    const { data: lead, error } = await supabase
+    const insert = supabase
       .from("leads")
       .insert({
         name,
@@ -24,18 +24,45 @@ export async function POST(request: Request) {
         stage,
         pain_points,
         email: body.email?.trim() || null,
+        contact_number: body.contact_number?.trim() || null,
+        lead_source: body.lead_source?.trim() || null,
+        inquiry_type: body.inquiry_type?.trim() || null,
+        next_follow_up_date: body.next_follow_up_date?.trim() || null,
         notes: combineNotesWithMeta({
           notes: body.notes?.trim() ?? "",
           contactNumber: body.contact_number?.trim() ?? "",
           leadSource: body.lead_source?.trim() ?? "",
           inquiryType: body.inquiry_type?.trim() ?? "",
+          nextFollowUpDate: body.next_follow_up_date?.trim() ?? "",
         }),
-      })
-      .select("*")
-      .single();
+      });
 
-    if (error) return jsonError(error.message, 500);
+    let { data: lead, error } = await insert.select("*").single();
 
+    if (isMissingColumnError(error)) {
+      const fallback = await supabase
+        .from("leads")
+        .insert({
+          name,
+          company,
+          stage,
+          pain_points,
+          email: body.email?.trim() || null,
+          notes: combineNotesWithMeta({
+            notes: body.notes?.trim() ?? "",
+            contactNumber: body.contact_number?.trim() ?? "",
+            leadSource: body.lead_source?.trim() ?? "",
+            inquiryType: body.inquiry_type?.trim() ?? "",
+            nextFollowUpDate: body.next_follow_up_date?.trim() ?? "",
+          }),
+        })
+        .select("*")
+        .single();
+      lead = fallback.data;
+      error = fallback.error;
+    }
+
+    if (error || !lead) return jsonError(error?.message ?? "Inquiry not created.", 500);
     await supabase.from("audit_logs").insert({
       table_name: "leads",
       row_id: lead.id,
@@ -47,4 +74,13 @@ export async function POST(request: Request) {
   } catch (error) {
     return jsonError(error instanceof Error ? error.message : "Invalid request.");
   }
+}
+
+function isMissingColumnError(error: { message?: string; code?: string } | null) {
+  return Boolean(
+    error &&
+      (error.code === "PGRST204" ||
+        error.message?.toLowerCase().includes("column") ||
+        error.message?.toLowerCase().includes("schema cache")),
+  );
 }

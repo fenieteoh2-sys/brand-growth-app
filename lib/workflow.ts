@@ -8,26 +8,44 @@ export const LEAD_STAGES: LeadStage[] = [
 ];
 
 export const LEAD_SOURCES = [
-  "WhatsApp",
-  "Walk-in",
-  "Facebook",
-  "TikTok",
-  "Instagram",
-  "Phone call",
-  "Referral",
-  "Existing customer",
-  "Other",
+  "EXISTING CUSTOMER",
+  "FACEBOOK",
+  "INSTAGRAM",
+  "PHONE CALL",
+  "REFERRAL",
+  "LOYALTY MEMBER",
+  "TELEGRAM",
+  "TIKTOK",
+  "WALK-IN",
+  "WEBSITE",
+  "WHATSAPP",
+  "XHS",
 ];
 
 export const INQUIRY_TYPES = [
-  "Tools",
-  "Power tools",
-  "Workshop tools",
-  "Plumbing",
-  "Sanitary ware",
-  "Renovation",
-  "Hardware accessories",
-  "Other",
+  "AGRICULTURE",
+  "BEARING",
+  "DOOR/LOCK",
+  "ELECTRICAL",
+  "FASTENER",
+  "GARDEN",
+  "HARDWARE",
+  "HOIST",
+  "HOME",
+  "NETTING",
+  "PAINT",
+  "PANEL",
+  "PLUMBING",
+  "PNEUMATIC",
+  "POWER",
+  "SAFETY",
+  "SANITARY WARE",
+  "SEALANT",
+  "SHOE",
+  "TAPE",
+  "VEHICLE",
+  "WELDING",
+  "WHEEL",
 ];
 
 export const REPLY_TYPES: { value: ReplyType; label: string }[] = [
@@ -67,4 +85,18 @@ export function parseReplyType(source: string): ReplyType | null {
   return REPLY_TYPES.some((type) => type.value === value)
     ? (value as ReplyType)
     : null;
+}
+
+export type FollowUpFilter = "All" | "Overdue" | "Today" | "Upcoming" | "No date";
+
+export function getTodayKey() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+export function getFollowUpStatus(date: string | null | undefined) {
+  if (!date) return "No date";
+  const today = getTodayKey();
+  if (date < today) return "Overdue";
+  if (date === today) return "Today";
+  return "Upcoming";
 }
